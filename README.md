@@ -15,7 +15,7 @@ Options:
 * `-p` : printkey
 * `-s SUFFIX` : FILE1 -> FILE1SUFFIX, useful for batch processing many files and only having to enter pass-phrase once
 
-If no files are specified input is read from stdin. Output is sent to stdout.
+If no files are specified input is read from stdin. Output from encrypting/decrypting stdin is always sent to stdout. Output from encrypting/decrypting files is sent to stdout unless a suffix is specified.
 
 ## Installation
 
