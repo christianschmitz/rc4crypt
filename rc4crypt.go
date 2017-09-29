@@ -41,7 +41,7 @@ func parseArgs() (decrypt bool, printKey bool, fnames []string) {
 	p := flag.Bool("p", false, "print key")
 
 	var usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: rc4crypt [FILE1 [FILE2 ..]] [options]\noptions:\n")
+		fmt.Fprintf(os.Stderr, "Usage: rc4crypt [options] [FILE1 [FILE2 ..]] \noptions:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "output is printed stdout, pass-phrase is read from /dev/tty (or stdin as backup)\n")
 		fmt.Fprintf(os.Stderr, "if no files are specified stream is read from stdin\n")

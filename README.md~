@@ -21,4 +21,4 @@ If no files are specified input is read from stdin. Output is sent to stdout.
 Compile:
 `go build rc4crypt.go`
 
-Copy to the binary into a directory in your PATH.
+Copy to the binary into a directory in your path.
