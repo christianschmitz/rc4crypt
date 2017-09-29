@@ -10,35 +10,35 @@ import (
 	"os"
 )
 
-func readInput(fnames []string) []byte {
-	var allBytes []byte
+func readStdin() []byte {
+	r := bufio.NewReader(os.Stdin)
+	bytes, _ := r.ReadBytes('\x00')
 
-	for _, fname := range fnames {
+	return bytes
+}
+
+func readFile(fname string) []byte {
+	var bytes []byte
+
+	if fname == "stdin" {
+		bytes = readStdin()
+	} else {
 		f, err := os.Open(fname)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		r := bufio.NewReader(f)
-		bytes, _ := r.ReadBytes('\x00')
-
-		allBytes = append(allBytes, bytes...)
+		bytes, _ = r.ReadBytes('\x00')
 	}
 
-	if len(fnames) == 0 {
-		// read from stdin
-		r := bufio.NewReader(os.Stdin)
-		bytes, _ := r.ReadBytes('\x00')
-
-		allBytes = append(allBytes, bytes...)
-	}
-
-	return allBytes
+	return bytes
 }
 
-func parseArgs() (decrypt bool, printKey bool, fnames []string) {
+func parseArgs() (decrypt bool, printKey bool, suffix string, fnames []string) {
 	d := flag.Bool("d", false, "decrypt")
 	p := flag.Bool("p", false, "print key")
+	s := flag.String("s", "", "suffix (ignored when if no files are specified)")
 
 	var usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: rc4crypt [options] [FILE1 [FILE2 ..]] \noptions:\n")
@@ -55,6 +55,7 @@ func parseArgs() (decrypt bool, printKey bool, fnames []string) {
 
 	decrypt = *d
 	printKey = *p
+	suffix = *s
 
 	return
 }
@@ -125,24 +126,45 @@ func applyEncryption(input []byte, key []byte) []byte {
 	return output
 }
 
-func main() {
-	decrypt, printKey, fnames := parseArgs()
+func printOrWrite(fname string, suffix string, output []byte) {
+	if suffix == "" {
+		fmt.Println(string(output))
+	} else {
+		fnameNew := fname + suffix
 
-	input := readInput(fnames)
+		f, err := os.Create(fnameNew)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	if decrypt {
-		input, _ = base64.StdEncoding.DecodeString(string(input))
+		f.Write(output)
 	}
+}
+
+func main() {
+	decrypt, printKey, suffix, fnames := parseArgs()
 
 	passPhrase := readPassPhrase(decrypt)
 
 	key := makeKey(passPhrase, printKey)
 
-	output := applyEncryption(input, key)
-
-	if !decrypt {
-		output = []byte(base64.StdEncoding.EncodeToString(output))
+	if len(fnames) == 0 {
+		fnames = append(fnames, "stdin")
 	}
 
-	fmt.Println(string(output))
+	for _, fname := range fnames {
+		input := readFile(fname)
+
+		if decrypt {
+			input, _ = base64.StdEncoding.DecodeString(string(input))
+		}
+
+		output := applyEncryption(input, key)
+
+		if !decrypt {
+			output = []byte(base64.StdEncoding.EncodeToString(output))
+		}
+
+		printOrWrite(fname, suffix, output)
+	}
 }
