@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
+	"path"
 )
 
 func readStdin() []byte {
@@ -138,7 +139,7 @@ func printOrWrite(fname string, suffix string, output []byte) {
 	if suffix == "" || fname == "stdin" {
 		fmt.Println(string(output))
 	} else {
-		fnameNew := fname + suffix
+		fnameNew := path.Base(fname + suffix)
 
 		f, err := os.Create(fnameNew)
 		if err != nil {
