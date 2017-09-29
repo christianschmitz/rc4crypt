@@ -13,6 +13,7 @@ You are prompted for a pass-phrase. Internally this is converted to a 256-byte k
 Options:
 * `-d` : decrypt
 * `-p` : printkey
+* `-s SUFFIX` : FILE1 -> FILE1SUFFIX, useful for batch processing many files and only having to enter pass-phrase once
 
 If no files are specified input is read from stdin. Output is sent to stdout.
 

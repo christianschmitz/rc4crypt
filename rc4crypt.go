@@ -127,7 +127,7 @@ func applyEncryption(input []byte, key []byte) []byte {
 }
 
 func printOrWrite(fname string, suffix string, output []byte) {
-	if suffix == "" {
+	if suffix == "" || fname == "stdin" {
 		fmt.Println(string(output))
 	} else {
 		fnameNew := fname + suffix
