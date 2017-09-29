@@ -24,6 +24,7 @@ func readFile(fname string) []byte {
 		bytes = readStdin()
 	} else {
 		f, err := os.Open(fname)
+		defer f.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -62,6 +63,7 @@ func parseArgs() (decrypt bool, printKey bool, suffix string, fnames []string) {
 
 func readPassPhrase(decrypt bool) []byte {
 	f, err := os.Open("/dev/tty")
+	defer f.Close()
 	if err != nil {
 		f = os.Stdin
 	}
@@ -107,7 +109,13 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 	return key
 }
 
-func applyEncryption(input []byte, key []byte) []byte {
+func applyEncryption(input []byte, keyOrig []byte) []byte {
+	// copy the key so it isn't changed
+	key := make([]byte, len(keyOrig))
+	for i, v := range keyOrig {
+		key[i] = v
+	}
+
 	output := make([]byte, len(input))
 
 	x := 0
@@ -138,6 +146,7 @@ func printOrWrite(fname string, suffix string, output []byte) {
 		}
 
 		f.Write(output)
+		f.Close()
 	}
 }
 
