@@ -48,14 +48,14 @@ func printUsage() {
 		fmt.Fprintf(os.Stderr, str)
 	}
 
-	f("Usage: rc4crypt [-p | [-h] -s <suffix> [<file> ..[<file>]]]\n\n")
+	f("Usage: rc4crypt [-p | [-h] [-s <suffix>] [<file> ..[<file>]]]\n\n")
 
 	f("Options:\n")
 	f(" -p           Print the key generated from the pass-phrase.\n")
-	f("              This key can then be used in other encryption tools like openssl or mcrypt.\n")
+	f("              This key can then be used in other crypto tools (e.g. openssl or mcrypt).\n")
 	f(" -s <suffix>  Generate output filenames by appending this suffix to input filenames.\n")
 	f("              Ignored when reading from stdin.\n")
-	f(" -h:          Print this message.\n\n")
+	f(" -h           Print this message.\n\n")
 
 	f("Details:\n")
 	f("  Read from stdin if no files are specified.\n")

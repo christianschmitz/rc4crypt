@@ -4,15 +4,15 @@
 
 Simple command line tool to encrypt/decrypt plain text. Exactly the same algorithm as the TXTcrypt app by Vlad Alexa: vladalexa.com/apps/ios/txtcrypt
 
-You are prompted for a pass-phrase. Internally this is converted to a 256-byte key. The RC4 encryption algorithm is used.
+You are prompted for a pass-phrase. Internally this is converted to a 256-byte key. The rc4 encryption algorithm is used.
 
 ## Usage
 
-`rc4crypt [-p | [-h] -s <suffix> [<file> ..[<file>]]]`
+`rc4crypt [-p | [-h] [-s <suffix>] [<file> ..[<file>]]]`
 
 Options:
 
-* `-p`: print the key generated from the pass-phrase. This key can then be used in other encryption tools like openssl or mcrypt.
+* `-p`: print the key generated from the pass-phrase. This key can then be used in other crypto tools (e.g. openssl or mcrypt).
 * `-s <suffix>`: generate output filenames by appending this suffix to input filenames.  Ignored when reading from stdin.
 * `-h`: print the help message.
 
