@@ -16,14 +16,11 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-const (
-	BYTE0   byte = '\x00'
-	BYTE256 byte = '\xff'
-)
+const STOPBYTE byte = '\x00'
 
 func readStdin() []byte {
 	r := bufio.NewReader(os.Stdin)
-	bytes, _ := r.ReadBytes(BYTE0)
+	bytes, _ := r.ReadBytes(STOPBYTE)
 
 	return bytes
 }
@@ -41,7 +38,7 @@ func readFile(fname string) []byte {
 		}
 
 		r := bufio.NewReader(f)
-		bytes, _ = r.ReadBytes(BYTE0)
+		bytes, _ = r.ReadBytes(STOPBYTE)
 	}
 
 	return bytes
@@ -154,6 +151,7 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 	msg2 := "Enter pass-phrase again (leave blank to decrypt):"
 
 	if printKey {
+		// no decryption possible when printing key, so make this clear
 		msg2 = "Enter pass-phrase again:"
 	}
 
@@ -189,7 +187,7 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 	x := 0
 
 	for i, _ := range key {
-		x = int(byte(x) + passPhrase[(i%len(passPhrase))] + (key[i] & BYTE256))
+		x = int(byte(x) + passPhrase[i%len(passPhrase)] + key[i])
 		tmp := key[i]
 		key[i] = key[x]
 		key[x] = tmp
@@ -197,6 +195,7 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 
 	if printKey {
 		fmt.Printf(base64.StdEncoding.EncodeToString(key))
+		// do nothing else, so quit program
 		os.Exit(0)
 	}
 
@@ -217,11 +216,11 @@ func applyEncryption(input []byte, keyOrig []byte) []byte {
 
 	for i, _ := range input {
 		x = (x + 1) % 256
-		y = int(key[x] + byte(y)&BYTE256)
+		y = int(key[x] + byte(y))
 		tmp := key[x]
 		key[x] = key[y]
 		key[y] = tmp
-		r := key[(key[x] + key[y]&BYTE256)]
+		r := key[key[x]+key[y]]
 		output[i] = byte(input[i] ^ r)
 	}
 
