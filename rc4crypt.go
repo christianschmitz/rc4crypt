@@ -10,15 +10,20 @@ import (
 	"path"
 )
 
-// it is not worthwhile trying to eliminate this depencency
-// it is pretty standardized, and gives abstraction of target system
+// It is not worthwhile trying to eliminate the following depencency.
+// It is pretty standardized, and gives abstraction of target systems.
 import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+const (
+	BYTE0   byte = '\x00'
+	BYTE256 byte = '\xff'
+)
+
 func readStdin() []byte {
 	r := bufio.NewReader(os.Stdin)
-	bytes, _ := r.ReadBytes('\x00')
+	bytes, _ := r.ReadBytes(BYTE0)
 
 	return bytes
 }
@@ -36,7 +41,7 @@ func readFile(fname string) []byte {
 		}
 
 		r := bufio.NewReader(f)
-		bytes, _ = r.ReadBytes('\x00')
+		bytes, _ = r.ReadBytes(BYTE0)
 	}
 
 	return bytes
@@ -131,7 +136,6 @@ func parseArgs() (bool, string, []string) {
 	return printKey, suffix, fnames
 }
 
-// ReadPassword function
 func readPassPhrase(printKey bool) ([]byte, bool) {
 	f, err := os.Open("/dev/tty")
 	defer f.Close()
@@ -139,30 +143,36 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 		f = os.Stdin
 	}
 
-	decrypt := false
-
 	fmt.Fprintf(os.Stderr, "Enter pass-phrase: ")
 	try1, err1 := terminal.ReadPassword(int(f.Fd()))
+	fmt.Fprintf(os.Stderr, "\n")
 	if err1 != nil {
 		log.Fatal(err1)
 	}
 
+	msg2 := "Enter pass-phrase again (leave blank to decrypt):"
+
 	if printKey {
-		return try1, false
+		msg2 = "Enter pass-phrase again:"
 	}
 
-	fmt.Fprintf(os.Stderr, "\nEnter pass-phrase again (leave blank to decrypt): ")
+	fmt.Fprintf(os.Stderr, msg2)
 	try2, err2 := terminal.ReadPassword(int(f.Fd()))
+	fmt.Fprintf(os.Stderr, "\n")
 	if err2 != nil {
 		log.Fatal(err2)
 	}
 
-	fmt.Fprintf(os.Stderr, "\n")
+	decrypt := false
 
 	if string(try2) == "" {
-		decrypt = true
+		if printKey {
+			log.Fatal("Error: key generation requires entering pass-phrase twice")
+		} else {
+			decrypt = true
+		}
 	} else if string(try1) != string(try2) {
-		log.Fatal("Error: passphrases dont match")
+		log.Fatal("Error: pass-phrases dont match")
 	}
 
 	return try1, decrypt
@@ -175,18 +185,17 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 		key[i] = byte(i)
 	}
 
-	//var x int
 	x := 0
 
 	for i, _ := range key {
-		x = int(byte(x) + passPhrase[(i%len(passPhrase))] + (key[i] & '\xFF'))
-		swap := key[i]
+		x = int(byte(x) + passPhrase[(i%len(passPhrase))] + (key[i] & BYTE256))
+		tmp := key[i]
 		key[i] = key[x]
-		key[x] = swap
+		key[x] = tmp
 	}
 
 	if printKey {
-		fmt.Println(base64.StdEncoding.EncodeToString(key))
+		fmt.Printf(base64.StdEncoding.EncodeToString(key))
 		os.Exit(0)
 	}
 
@@ -207,11 +216,11 @@ func applyEncryption(input []byte, keyOrig []byte) []byte {
 
 	for i, _ := range input {
 		x = (x + 1) % 256
-		y = int(key[x] + byte(y)&'\xFF')
-		swap := key[x]
+		y = int(key[x] + byte(y)&BYTE256)
+		tmp := key[x]
 		key[x] = key[y]
-		key[y] = swap
-		r := key[(key[x] + key[y]&'\xFF')]
+		key[y] = tmp
+		r := key[(key[x] + key[y]&BYTE256)]
 		output[i] = byte(input[i] ^ r)
 	}
 
