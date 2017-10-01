@@ -8,14 +8,23 @@ You are prompted for a pass-phrase. Internally this is converted to a 256-byte k
 
 ## Usage
 
-`rc4crypt [OPTIONS] [FILE1 [FILE2 ...]]`
+`rc4crypt [-p | -s <suffix> [<file> ..[<file>]]] [-h]`
 
 Options:
-* `-d` : decrypt
-* `-p` : printkey
-* `-s SUFFIX` : FILE1 -> FILE1SUFFIX, useful for batch processing many files and only having to enter pass-phrase once
 
-If no files are specified input is read from stdin. Output from encrypting/decrypting stdin is always sent to stdout. Output from encrypting/decrypting files is sent to stdout unless a suffix is specified.
+* `-p`: print the key generated from the pass-phrase. This key can then be used in other encryption tools like openssl or mcrypt.
+* `-s <suffix>`: generate output filenames by appending this suffix to input filenames.  Ignored when reading from stdin.
+* `-h`: Print the help message.
+
+Details:
+
+* Read from stdin if no files are specified.
+* Output is printed to stdout when reading from stdin.
+* Output is printed to stdout if no suffix is specified for input files.
+* Pass-phrase is read from terminal.
+* Decrypt by entering blank pass-phrase at second prompt.
+* Uses rc4 (a.k.a. arcfour) algorithm and base64 encoding.
+* Encrypts/decrypts plain text into plain text.
 
 ## Installation
 

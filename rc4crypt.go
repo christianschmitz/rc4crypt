@@ -1,14 +1,19 @@
 package main
 
+// standard packages
 import (
 	"bufio"
 	"encoding/base64"
-	"flag"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"path"
+)
+
+// it is not worthwhile trying to eliminate this depencency
+// it is pretty standardized, and gives abstraction of target system
+import (
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func readStdin() []byte {
@@ -37,53 +42,130 @@ func readFile(fname string) []byte {
 	return bytes
 }
 
-func parseArgs() (decrypt bool, printKey bool, suffix string, fnames []string) {
-	d := flag.Bool("d", false, "decrypt")
-	p := flag.Bool("p", false, "print key")
-	s := flag.String("s", "", "suffix (ignored when if no files are specified)")
-
-	var usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: rc4crypt [options] [FILE1 [FILE2 ..]] \noptions:\n")
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "output is printed stdout, pass-phrase is read from /dev/tty (or stdin as backup)\n")
-		fmt.Fprintf(os.Stderr, "if no files are specified stream is read from stdin\n")
+func printUsage() {
+	// shortcut, to give us cleaner code
+	var f = func(str string) {
+		fmt.Fprintf(os.Stderr, str)
 	}
 
-	flag.Usage = usage
+	f("Usage: rc4crypt [-p | -s <suffix> [<file> ..[<file>]]] [-h]\n\n")
 
-	flag.Parse()
+	f("Options:\n")
+	f(" -p           Print the key generated from the pass-phrase.\n")
+	f("              This key can then be used in other encryption tools like openssl or mcrypt.\n")
+	f(" -s <suffix>  Generate output filenames by appending this suffix to input filenames.\n")
+	f("              Ignored when reading from stdin.\n")
+	f(" -h:          Print this message.\n\n")
 
-	fnames = flag.Args()
-
-	decrypt = *d
-	printKey = *p
-	suffix = *s
-
-	return
+	f("Details:\n")
+	f("  Read from stdin if no files are specified.\n")
+	f("  Output is printed to stdout when reading from stdin.\n")
+	f("  Output is printed to stdout if no suffix is specified for input files.\n")
+	f("  Pass-phrase is read from terminal.\n")
+	f("  Decrypt by entering blank pass-phrase at second prompt.\n")
+	f("  Uses rc4 (a.k.a. arcfour) algorithm and base64 encoding.\n")
+	f("  Encrypts/decrypts plain text into plain text.\n\n")
 }
 
-func readPassPhrase(decrypt bool) []byte {
+func printUsageAndQuit(msg string) {
+	exitCode := 0
+	if msg != "" { // msg is assumed to represent an error
+		fmt.Fprintf(os.Stderr, msg+"\n")
+		exitCode = 1
+	}
+
+	printUsage()
+
+	os.Exit(exitCode)
+}
+
+// using the flag package doesnt allow putting options after other arguments
+// this can be annoying
+func parseArgs() (bool, string, []string) {
+	i := 0
+	args := os.Args[1:]
+
+	printKey := false
+	suffix := ""
+	fnames := make([]string, 0)
+
+	n := len(args)
+	// loop the arguments
+	for i < n {
+		arg := args[i]
+
+		if arg[0] == '-' { // options
+			switch {
+			case arg == "-s":
+				if i < n-1 {
+					suffix = args[i+1]
+					i = i + 1
+				} else {
+					printUsageAndQuit("Error: the " + arg + " option requires an argument")
+				}
+			case arg == "-p":
+				printKey = true
+
+				if n > 1 {
+					printUsageAndQuit("Error: the " + arg + " option allows no other options or arguments")
+				}
+			case arg == "-h":
+				printUsageAndQuit("")
+			default:
+				printUsageAndQuit("Error: option " + arg + " not recognized")
+			}
+		} else { // positional arguments (i.e. filenames)
+			// check for file existence as soon as possible
+			f, err := os.Open(arg)
+			if err != nil {
+				printUsageAndQuit("Error: " + arg + " is not a file")
+			}
+			f.Close()
+
+			fnames = append(fnames, arg)
+		}
+
+		i = i + 1
+	}
+
+	return printKey, suffix, fnames
+}
+
+// ReadPassword function
+func readPassPhrase(printKey bool) ([]byte, bool) {
 	f, err := os.Open("/dev/tty")
 	defer f.Close()
 	if err != nil {
 		f = os.Stdin
 	}
 
+	decrypt := false
+
 	fmt.Fprintf(os.Stderr, "Enter pass-phrase: ")
-	try1, _ := terminal.ReadPassword(int(f.Fd()))
+	try1, err1 := terminal.ReadPassword(int(f.Fd()))
+	if err1 != nil {
+		log.Fatal(err1)
+	}
 
-	if !decrypt {
-		fmt.Fprintf(os.Stderr, "\nEnter pass-phrase again: ")
-		try2, _ := terminal.ReadPassword(int(f.Fd()))
+	if printKey {
+		return try1, false
+	}
 
-		if string(try1) != string(try2) {
-			log.Fatal("Error: passphrases dont match")
-		}
+	fmt.Fprintf(os.Stderr, "\nEnter pass-phrase again (leave blank to decrypt): ")
+	try2, err2 := terminal.ReadPassword(int(f.Fd()))
+	if err2 != nil {
+		log.Fatal(err2)
 	}
 
 	fmt.Fprintf(os.Stderr, "\n")
 
-	return try1
+	if string(try2) == "" {
+		decrypt = true
+	} else if string(try1) != string(try2) {
+		log.Fatal("Error: passphrases dont match")
+	}
+
+	return try1, decrypt
 }
 
 func makeKey(passPhrase []byte, printKey bool) []byte {
@@ -104,7 +186,8 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 	}
 
 	if printKey {
-		fmt.Println("key: ", base64.StdEncoding.EncodeToString(key))
+		fmt.Println(base64.StdEncoding.EncodeToString(key))
+		os.Exit(0)
 	}
 
 	return key
@@ -152,9 +235,9 @@ func printOrWrite(fname string, suffix string, output []byte) {
 }
 
 func main() {
-	decrypt, printKey, suffix, fnames := parseArgs()
+	printKey, suffix, fnames := parseArgs()
 
-	passPhrase := readPassPhrase(decrypt)
+	passPhrase, decrypt := readPassPhrase(printKey)
 
 	key := makeKey(passPhrase, printKey)
 
