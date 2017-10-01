@@ -1,3 +1,6 @@
+// copyright: Christian Schmitz
+// contact: christian.schmitz@telenet.be
+
 package main
 
 // standard packages
@@ -10,8 +13,8 @@ import (
 	"path"
 )
 
-// It is not worthwhile trying to eliminate the following depencency.
-// It is pretty standardized, and gives abstraction of target systems.
+// it is not worthwhile trying to eliminate the following depencency
+// (it is pretty standardized, and gives abstraction of target systems).
 import (
 	"golang.org/x/crypto/ssh/terminal"
 )

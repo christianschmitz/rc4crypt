@@ -57,6 +57,10 @@ rc4crypt -h
 * golang toolchain
 * golang-golang-x-crypto-dev package
 
+## Copyright
+
+Christian Schmitz
+
 ## Contact
 
 christian.schmitz@telenet.be
