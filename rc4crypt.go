@@ -53,19 +53,20 @@ func printUsage() {
 		fmt.Fprintf(os.Stderr, str)
 	}
 
-	f("Usage: rc4crypt [-p | [-h] [-s <suffix>] [<file> ..[<file>]]]\n\n")
+	f("Usage: rc4crypt [-p | [-h] [-s <suffix>] [<file> [<file> ..]]]\n\n")
 
 	f("Options:\n")
 	f(" -p           Print the key generated from the pass-phrase.\n")
 	f("              This key can then be used in other crypto tools (e.g. openssl or mcrypt).\n")
-	f(" -s <suffix>  Generate output filenames by appending this suffix to input filenames.\n")
+	f("              Prints to stdout.\n")
+	f(" -s <suffix>  Generate output filename(s) by appending this suffix to input filename(s).\n")
 	f("              Ignored when reading from stdin.\n")
 	f(" -h           Print this message.\n\n")
 
 	f("Details:\n")
 	f("  Read from stdin if no files are specified.\n")
 	f("  Output is printed to stdout when reading from stdin.\n")
-	f("  Output is printed to stdout if no suffix is specified for input files.\n")
+	f("  Output is printed to stdout if no suffix is specified for input file(s).\n")
 	f("  Pass-phrase is read from terminal.\n")
 	f("  Decrypt by entering blank pass-phrase at second prompt.\n")
 	f("  Uses rc4 (a.k.a. arcfour) algorithm and base64 encoding.\n")
