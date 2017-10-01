@@ -48,7 +48,7 @@ func printUsage() {
 		fmt.Fprintf(os.Stderr, str)
 	}
 
-	f("Usage: rc4crypt [-p | -s <suffix> [<file> ..[<file>]]] [-h]\n\n")
+	f("Usage: rc4crypt [-p | [-h] -s <suffix> [<file> ..[<file>]]]\n\n")
 
 	f("Options:\n")
 	f(" -p           Print the key generated from the pass-phrase.\n")
