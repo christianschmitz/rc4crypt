@@ -11,11 +11,13 @@ import (
 	"log"
 	"os"
 	"path"
+	// crypto/rc4 package is not used because it doesnt expose the cipher data (referred to as 'key' below)
+	//  what crypto/rc4 calls a 'key' is referred as a 'pass-phrase' below
 )
 
-// it is not worthwhile trying to eliminate the following depencency
-// (it is pretty standardized, and gives abstraction of target systems).
 import (
+	// it is not worthwhile trying to eliminate the following depencency
+	// (it is pretty standardized, and gives abstraction of target systems).
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -150,6 +152,9 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 	if err1 != nil {
 		log.Fatal(err1)
 	}
+	if string(try1) == "" {
+		log.Fatal("Error: pass-phrase must be at least 1 character long")
+	}
 
 	msg2 := "Enter pass-phrase again (leave blank to decrypt):"
 
@@ -191,9 +196,7 @@ func makeKey(passPhrase []byte, printKey bool) []byte {
 
 	for i, _ := range key {
 		x = int(byte(x) + passPhrase[i%len(passPhrase)] + key[i])
-		tmp := key[i]
-		key[i] = key[x]
-		key[x] = tmp
+		key[x], key[i] = key[i], key[x]
 	}
 
 	if printKey {
@@ -220,9 +223,7 @@ func applyEncryption(input []byte, keyOrig []byte) []byte {
 	for i, _ := range input {
 		x = (x + 1) % 256
 		y = int(key[x] + byte(y))
-		tmp := key[x]
-		key[x] = key[y]
-		key[y] = tmp
+		key[y], key[x] = key[x], key[y]
 		r := key[key[x]+key[y]]
 		output[i] = byte(input[i] ^ r)
 	}
