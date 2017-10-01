@@ -28,7 +28,35 @@ Details:
 
 ## Installation
 
-Compile:
-`go build rc4crypt.go`
+Download:
+```
+git clone https://github.com/christianschmitz/rc4crypt ./rc4crypt
+cd rc4crypt
+```
 
-Copy the binary into a directory in your PATH.
+Compile:
+```
+go build rc4crypt.go
+```
+
+Copy the binary into a directory in your PATH. E.g:
+```
+echo 'export PATH=${PATH}:~/bin' >> ~/.bashrc
+cp rc4crypt ~/bin/
+```
+
+Open a new terminal and try:
+```
+rc4crypt -h
+```
+
+## Dependencies
+
+* linux system
+* git toolchain
+* golang toolchain
+* golang-golang-x-crypto-dev package
+
+## Contact
+
+christian.schmitz@telenet.be
