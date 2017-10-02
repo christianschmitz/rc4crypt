@@ -8,11 +8,10 @@ You are prompted for a pass-phrase. Internally this is converted to a 256-byte k
 
 ## Usage
 
-`rc4crypt [-p | [-h] [-s <suffix>] [<file> [<file> ..]]]`
+`rc4crypt [-h] [-s <suffix>] [<file> [<file> ..]]`
 
 Options:
 
-* `-p`: print the key generated from the pass-phrase. This key can then be used in other crypto tools (e.g. openssl or mcrypt). Prints to stdout.
 * `-s <suffix>`: generate output filename(s) by appending this suffix to input filename(s).  Ignored when reading from stdin.
 * `-h`: print the help message.
 

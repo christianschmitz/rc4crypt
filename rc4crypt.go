@@ -6,18 +6,17 @@ package main
 // standard packages
 import (
 	"bufio"
+	"crypto/rc4"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"path"
-	// crypto/rc4 package is not used because it doesnt expose the cipher data (referred to as 'key' below)
-	//  what crypto/rc4 calls a 'key' is referred as a 'pass-phrase' below
 )
 
 import (
 	// it is not worthwhile trying to eliminate the following depencency
-	// (it is pretty standardized, and gives abstraction of target systems).
+	// (it is pretty standardized, and gives abstraction of target systems)
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -55,12 +54,9 @@ func printUsage() {
 		fmt.Fprintf(os.Stderr, str)
 	}
 
-	f("Usage: rc4crypt [-p | [-h] [-s <suffix>] [<file> [<file> ..]]]\n\n")
+	f("Usage: rc4crypt [-h] [-s <suffix>] [<file> [<file> ..]]\n\n")
 
 	f("Options:\n")
-	f(" -p           Print the key generated from the pass-phrase.\n")
-	f("              This key can then be used in other crypto tools (e.g. openssl or mcrypt).\n")
-	f("              Prints to stdout.\n")
 	f(" -s <suffix>  Generate output filename(s) by appending this suffix to input filename(s).\n")
 	f("              Ignored when reading from stdin.\n")
 	f(" -h           Print this message.\n\n")
@@ -89,11 +85,10 @@ func printUsageAndQuit(msg string) {
 
 // using the flag package doesnt allow putting options after other arguments
 // this can be annoying
-func parseArgs() (bool, string, []string) {
+func parseArgs() (string, []string) {
 	i := 0
 	args := os.Args[1:]
 
-	printKey := false
 	suffix := ""
 	fnames := make([]string, 0)
 
@@ -110,12 +105,6 @@ func parseArgs() (bool, string, []string) {
 					i = i + 1
 				} else {
 					printUsageAndQuit("Error: the " + arg + " option requires an argument")
-				}
-			case arg == "-p":
-				printKey = true
-
-				if n > 1 {
-					printUsageAndQuit("Error: the " + arg + " option allows no other options or arguments")
 				}
 			case arg == "-h":
 				printUsageAndQuit("")
@@ -136,10 +125,10 @@ func parseArgs() (bool, string, []string) {
 		i = i + 1
 	}
 
-	return printKey, suffix, fnames
+	return suffix, fnames
 }
 
-func readPassPhrase(printKey bool) ([]byte, bool) {
+func readPassPhrase() ([]byte, bool) {
 	f, err := os.Open("/dev/tty")
 	defer f.Close()
 	if err != nil {
@@ -156,14 +145,7 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 		log.Fatal("Error: pass-phrase must be at least 1 character long")
 	}
 
-	msg2 := "Enter pass-phrase again (leave blank to decrypt):"
-
-	if printKey {
-		// no decryption possible when printing key, so make this clear
-		msg2 = "Enter pass-phrase again:"
-	}
-
-	fmt.Fprintf(os.Stderr, msg2)
+	fmt.Fprintf(os.Stderr, "Enter pass-phrase again (leave blank to decrypt):")
 	try2, err2 := terminal.ReadPassword(int(f.Fd()))
 	fmt.Fprintf(os.Stderr, "\n")
 	if err2 != nil {
@@ -173,11 +155,7 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 	decrypt := false
 
 	if string(try2) == "" {
-		if printKey {
-			log.Fatal("Error: key generation requires entering pass-phrase twice")
-		} else {
-			decrypt = true
-		}
+		decrypt = true
 	} else if string(try1) != string(try2) {
 		log.Fatal("Error: pass-phrases dont match")
 	}
@@ -185,48 +163,15 @@ func readPassPhrase(printKey bool) ([]byte, bool) {
 	return try1, decrypt
 }
 
-func makeKey(passPhrase []byte, printKey bool) []byte {
-	key := make([]byte, 256)
-
-	for i, _ := range key {
-		key[i] = byte(i)
-	}
-
-	x := 0
-
-	for i, _ := range key {
-		x = int(byte(x) + passPhrase[i%len(passPhrase)] + key[i])
-		key[x], key[i] = key[i], key[x]
-	}
-
-	if printKey {
-		fmt.Printf(base64.StdEncoding.EncodeToString(key))
-		// do nothing else, so quit program
-		os.Exit(0)
-	}
-
-	return key
-}
-
-func applyEncryption(input []byte, keyOrig []byte) []byte {
-	// copy the key so it isn't changed
-	key := make([]byte, len(keyOrig))
-	for i, v := range keyOrig {
-		key[i] = v
+func applyEncryption(input []byte, passPhrase []byte) []byte {
+	cipher, err := rc4.NewCipher(passPhrase)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: pass-phrase longer than 256 bytes, truncating")
 	}
 
 	output := make([]byte, len(input))
 
-	x := 0
-	y := 0
-
-	for i, _ := range input {
-		x = (x + 1) % 256
-		y = int(key[x] + byte(y))
-		key[y], key[x] = key[x], key[y]
-		r := key[key[x]+key[y]]
-		output[i] = byte(input[i] ^ r)
-	}
+	cipher.XORKeyStream(output, input)
 
 	return output
 }
@@ -248,11 +193,9 @@ func printOrWrite(fname string, suffix string, output []byte) {
 }
 
 func main() {
-	printKey, suffix, fnames := parseArgs()
+	suffix, fnames := parseArgs()
 
-	passPhrase, decrypt := readPassPhrase(printKey)
-
-	key := makeKey(passPhrase, printKey)
+	passPhrase, decrypt := readPassPhrase()
 
 	if len(fnames) == 0 {
 		fnames = append(fnames, "stdin")
@@ -265,7 +208,7 @@ func main() {
 			input, _ = base64.StdEncoding.DecodeString(string(input))
 		}
 
-		output := applyEncryption(input, key)
+		output := applyEncryption(input, passPhrase)
 
 		if !decrypt {
 			output = []byte(base64.StdEncoding.EncodeToString(output))
