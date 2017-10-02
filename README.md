@@ -15,7 +15,7 @@ Options:
 * `-s <suffix>`: generate output filename(s) by appending this suffix to input filename(s).  Ignored when reading from stdin.
 * `-h`: print the help message.
 
-Details:
+## Details
 
 * Read from stdin if no files are specified.
 * Output is printed to stdout when reading from stdin.
@@ -54,7 +54,7 @@ rc4crypt -h
 * linux system
 * git toolchain
 * golang toolchain
-* golang-golang-x-crypto-dev package
+* golang-golang-x-crypto-dev package (make sure it is in your GOPATH)
 
 ## Copyright
 
